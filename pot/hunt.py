@@ -75,9 +75,9 @@ def verify_in_isolation(genome_hex: str, partner_hex: str, max_steps: int,
 def _worker(task):
     from .soup import SoupConfig, run_soup, summarize
     from .experiment import _fires
-    mut, steps, seed, epochs = task
-    common = dict(soup_size=512, tape_len=64, max_steps=steps, mut_per_tape=mut,
-                  epochs=epochs, checkpoint_every=500, seed=seed)
+    mut, steps, seed, epochs, soup_size = task
+    common = dict(soup_size=soup_size, tape_len=64, max_steps=steps,
+                  mut_per_tape=mut, epochs=epochs, checkpoint_every=500, seed=seed)
     real = run_soup(SoupConfig(capture_events=40, **common))
     ctrl = run_soup(SoupConfig(scramble=True, **common))
     rs, ks = summarize(real), summarize(ctrl)
@@ -107,16 +107,16 @@ def _worker(task):
 
 
 def run_hunt(mutations=None, steps_list=None, seeds=8, epochs=16000, workers=None,
-             out="research/hunt_results.json"):
+             soup_size=512, out="research/hunt_results.json"):
     from .util import set_low_priority, polite_worker_count
     os.environ["RAYON_NUM_THREADS"] = "1"
     set_low_priority()
     mutations = mutations or DEFAULT_MUTATIONS
     steps_list = steps_list or DEFAULT_STEPS
     workers = workers or polite_worker_count()
-    tasks = [(m, s, sd, epochs)
+    tasks = [(m, s, sd, epochs, soup_size)
              for m in mutations for s in steps_list for sd in range(seeds)]
-    print(f"[hunt] {len(tasks)} runs (+ controls), {epochs} epochs, "
+    print(f"[hunt] {len(tasks)} runs (+ controls), {epochs} epochs, soup={soup_size}, "
           f"mut={mutations} steps={steps_list} seeds={seeds}, {workers} polite workers")
 
     t0 = time.time()
@@ -186,16 +186,22 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description="hunt for an isolable emergent replicator")
     ap.add_argument("--epochs", type=int, default=16000)
     ap.add_argument("--seeds", type=int, default=8)
+    ap.add_argument("--soup-size", type=int, default=512,
+                    help="bigger soup nucleates replicators far more often")
+    ap.add_argument("--mutations", type=float, nargs="+", default=None)
+    ap.add_argument("--steps", type=int, nargs="+", default=None)
     ap.add_argument("--workers", type=int, default=None)
     ap.add_argument("--out", default="research/hunt_results.json")
     ap.add_argument("--fast", action="store_true")
     args = ap.parse_args(argv)
     if args.fast:
         run_hunt(mutations=[0.0, 0.25], steps_list=[1024], seeds=args.seeds,
-                 epochs=args.epochs, workers=args.workers, out=args.out)
+                 epochs=args.epochs, workers=args.workers,
+                 soup_size=args.soup_size, out=args.out)
     else:
-        run_hunt(seeds=args.seeds, epochs=args.epochs, workers=args.workers,
-                 out=args.out)
+        run_hunt(mutations=args.mutations, steps_list=args.steps, seeds=args.seeds,
+                 epochs=args.epochs, workers=args.workers,
+                 soup_size=args.soup_size, out=args.out)
 
 
 if __name__ == "__main__":

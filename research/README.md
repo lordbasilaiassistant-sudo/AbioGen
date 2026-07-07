@@ -15,7 +15,7 @@ is asserted.
 
 | rung | claim | status |
 |---|---|---|
-| 0 | **self-replication** — copying arises from noise, no fitness | **real signal, control-gated** (`repl_rate` up to 0.138 vs 0.000 scrambled, low-mutation/high-step regime). Isolation of a standalone replicator: **in progress** (`pot.hunt`). |
+| 0 | **self-replication** — copying arises from noise, no fitness | **real but contextual.** `pot.hunt` (48 runs, fixed RNG): copying events are real and control-gated (captured tapes reproduce with their exact captured partner), but **0% reproduce against fresh naive partners** — no *autonomous* replicator isolated yet. Emergence rate only ~2% (1/48) vs the reference's ~40% — **diagnosed as soup-size limited** (ours 512 tapes vs the paper's ~131k; nucleation is a rare event that scales with soup size). Scaled 8,192-tape hunt running to nucleate + isolate one. |
 | 0 | **extinction anchor** — a structureless world dies | **holds** — null goes extinct every seed; structured recovers ~95% of a hidden map. |
 | — | **nurture (TENDED arm)** — a life-assisting rule surfaces real order | **real, control-surviving** in ~50% of seeds (dominant motif to 0.37, scramble stays flat). NURTURE_NECESSARY at the hard regime; WILD self-replicates alone at the easy one. |
 | 1+ | heredity, open-ended novelty, evolved function, collectives, sociality, adaptation | **not yet built / not shown.** |
