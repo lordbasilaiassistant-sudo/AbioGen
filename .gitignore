@@ -16,7 +16,7 @@ target/
 # per-seed soup checkpoints (large, regenerable). Aggregate results are kept.
 soup_seed*.json
 sweep_smoke.json
-sweep*.log
+*.log
 *.tmp
 
 # OS
