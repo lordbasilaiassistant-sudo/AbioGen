@@ -279,7 +279,14 @@ def run_soup(config: SoupConfig, progress: bool = False,
             if on_checkpoint is not None:
                 # live view: hand over the metric row, a soup snapshot, and the
                 # current dominant counts so a dashboard can watch the cells move.
-                on_checkpoint(epoch, soup, cp, uniq, counts)
+                # A view is never allowed to kill the science — swallow its errors.
+                try:
+                    on_checkpoint(epoch, soup, cp, uniq, counts)
+                except Exception as e:  # noqa: BLE001
+                    if not getattr(run, "_cb_warned", False):
+                        print(f"  [warn] on_checkpoint failed (view only): {e}",
+                              flush=True)
+                        run._cb_warned = True
             if progress:
                 print(f"  epoch {epoch:6d}  repl={repl_rate:.4f}  "
                       f"uniq={unique_ratio:.3f}  top={top_share:.3f}  "

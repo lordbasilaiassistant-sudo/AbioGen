@@ -127,6 +127,18 @@ def test_soup_is_deterministic_in_seed():
     assert a == b
 
 
+def test_checkpoint_frequency_does_not_change_the_dynamics():
+    # Integrity guard: how often we record metrics must NOT alter the soup. This
+    # regresses the real bug where the metric sampler drew from the physics RNG,
+    # so checkpoint_every silently changed the trajectory (a replicator appeared
+    # at one save-rate and vanished at another). The final soup must be identical.
+    base = dict(soup_size=96, tape_len=48, max_steps=192, epochs=800, seed=4)
+    a = run_soup(SoupConfig(checkpoint_every=40, **base))
+    b = run_soup(SoupConfig(checkpoint_every=137, **base))
+    assert [d["genome"] for d in a.dominant] == [d["genome"] for d in b.dominant]
+    assert a.trajectory[-1]["entropy"] == b.trajectory[-1]["entropy"]
+
+
 def test_baseline_is_deterministic_in_seed():
     cfg = BaselineConfig(seed=5, generations=30)
     a = run_baseline(cfg, structured=True)

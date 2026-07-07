@@ -37,10 +37,25 @@ RUNGS = [
 
 
 def _atomic_write(path, obj):
+    # On Windows, OneDrive / the http server / a browser can briefly lock the
+    # target, so os.replace races and raises WinError 5. Retry, then fall back to
+    # a direct (non-atomic) write. A dropped live frame is harmless — the next
+    # checkpoint overwrites it — so a lock must never crash the run.
+    data = json.dumps(obj, separators=(",", ":"))
     tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(obj, f, separators=(",", ":"))
-    os.replace(tmp, path)
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(data)
+        for _ in range(6):
+            try:
+                os.replace(tmp, path)
+                return
+            except PermissionError:
+                time.sleep(0.12)
+        with open(path, "w", encoding="utf-8") as f:  # last-resort direct write
+            f.write(data)
+    except PermissionError:
+        pass  # skip this frame entirely; the next one will land
 
 
 def run_live(soup_size=4096, mut=0.1, steps=1024, epochs=200000, seed=0,
