@@ -1,4 +1,7 @@
-# the-pot
+# AbioGen
+
+*Abiogenesis, generated.* The engine is **AbioGen**; the primordial soup it
+runs is the **`pot`** package inside it.
 
 **An accelerated origin-of-intelligence engine.** We build only the substrate
 physics. The soup is seeded with pure randomness. There is **no fitness
