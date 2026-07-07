@@ -1,0 +1,24 @@
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# rust / maturin build artifacts
+rust/target/
+target/
+*.pyd
+*.so
+*.dll
+
+# per-seed soup checkpoints (large, regenerable). Aggregate results are kept.
+soup_seed*.json
+sweep_smoke.json
+sweep*.log
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.db

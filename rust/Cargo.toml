@@ -1,0 +1,19 @@
+[package]
+name = "pot_rust"
+version = "0.1.0"
+edition = "2021"
+description = "Fast BFF interpreter for the-pot — batched, rayon-parallel."
+license = "MIT"
+
+[lib]
+name = "_rust"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.24", features = ["extension-module", "abi3-py39"] }
+rayon = "1.10"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1

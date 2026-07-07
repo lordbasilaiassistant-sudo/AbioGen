@@ -1,0 +1,89 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
+
+      - name: Install build deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install maturin numpy pytest
+
+      - name: Build the Rust interpreter (pot._rust)
+        run: maturin develop --release
+
+      - name: Assert the fast path is live
+        run: python -c "import pot; assert pot.HAVE_RUST, 'Rust ext not built'; print('rust interpreter OK')"
+
+      - name: Run tests (primitives + honesty controls)
+        run: pytest -q
+
+      - name: Smoke the experiment harness end-to-end
+        run: python -m pot.experiment --quick --epochs 120 --seeds 2
+
+      - name: Build the static site from real checkpoints
+        run: python web/build_site.py
+
+      - name: Upload site artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: the-pot-site
+          path: web/index.html
+
+  # Deploy the generated site to GitHub Pages on pushes to main.
+  deploy-pages:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Build ext + site
+        run: |
+          python -m pip install --upgrade pip
+          pip install maturin numpy
+          maturin develop --release
+          python web/build_site.py
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
