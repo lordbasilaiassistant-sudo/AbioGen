@@ -21,7 +21,7 @@ import time
 
 import numpy as np
 
-from .soup import SoupConfig, run_soup, _ascii
+from .soup import SoupConfig, run_soup, _ascii, _top_motif_share
 from .observatory import phase_transitions, TRACKED
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -30,9 +30,9 @@ DEFAULT_OUT = os.path.join(ROOT, "web", "live.json")
 # absolute (not control-gated) indicators for the live view only; the rigorous
 # control-gated verdicts are computed in the research pipeline, not here.
 RUNGS = [
-    ("self-replication", "repl_rate", 0.02),
-    ("motif dominance", "motif_share", 0.12),
-    ("lineage sweep", "top_share", 0.10),
+    ("self-replication", "repl_rate", 0.02, None),
+    ("motif dominance", "motif_share", 0.12, "motif_control"),
+    ("lineage sweep", "top_share", 0.10, "top_control"),
 ]
 
 
@@ -73,13 +73,36 @@ def run_live(soup_size=4096, mut=0.1, steps=1024, epochs=200000, seed=0,
     traj = []
 
     def snapshot(epoch, soup, cp, uniq, counts, status="running"):
-        gt = min(grid_tapes, soup.shape[0])
-        grid = soup[:gt].astype(int).tolist()          # real cells to render
+        N, L = soup.shape
         order = np.argsort(-counts)[:6]
         dominant = [{"count": int(counts[i]), "ascii": _ascii(uniq[i])} for i in order]
+
+        # STRUCTURE MAP, not raw bytes: render each shown tape by how much it
+        # matches the current dominant genome. A calm dark field lights up phosphor
+        # exactly where order (a shared lineage) is taking hold — that is the thing
+        # that matters, shown directly.
+        gt = min(grid_tapes, N)
+        dom = uniq[order[0]]
+        window = soup[:gt]
+        matchmap = (window == dom[None, :]).astype(np.uint8).tolist()
+
+        # LIVE SCRAMBLED CONTROL: shuffle every byte (kills structure, keeps the
+        # histogram) and recompute the order metrics on the wreckage. This is the
+        # honest noise floor, computed on THIS soup, right now — the hero shows the
+        # real soup pulling away from it, or not.
+        shuf = soup.reshape(-1).copy()
+        np.random.default_rng(int(epoch) + 1).shuffle(shuf)
+        shuf = shuf.reshape(N, L)
+        ctrl_motif = _top_motif_share(shuf)
+        _, cc = np.unique(shuf, axis=0, return_counts=True)
+        ctrl_top = float(cc.max()) / N
+        cp["motif_control"] = round(ctrl_motif, 5)
+        cp["top_control"] = round(ctrl_top, 5)
+
         rungs = [{"name": n, "metric": m, "value": round(cp.get(m, 0.0), 4),
+                  "control": round(cp.get(ck, 0.0), 4) if ck else None,
                   "reached": bool(cp.get(m, 0.0) > thr), "threshold": thr}
-                 for (n, m, thr) in RUNGS]
+                 for (n, m, thr, ck) in RUNGS]
         elapsed = time.time() - t0
         eps = (len(traj) * checkpoint_every) / elapsed if elapsed > 0 else 0.0
         _atomic_write(out, {
@@ -89,7 +112,7 @@ def run_live(soup_size=4096, mut=0.1, steps=1024, epochs=200000, seed=0,
             "elapsed_sec": round(elapsed, 1), "eps": round(eps, 1),
             "regime": regime,
             "trajectory": traj,
-            "grid": grid, "grid_shape": [gt, int(soup.shape[1])],
+            "matchmap": matchmap, "grid_shape": [gt, int(L)],
             "dominant": dominant,
             "rungs": rungs,
             "phase_transitions": phase_transitions(traj, keys=TRACKED)[:6],
