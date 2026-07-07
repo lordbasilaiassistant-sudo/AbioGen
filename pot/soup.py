@@ -123,7 +123,7 @@ class SoupRun:
 
 
 def run_soup(config: SoupConfig, progress: bool = False,
-             checkpoint_path: Optional[str] = None) -> SoupRun:
+             checkpoint_path: Optional[str] = None, on_checkpoint=None) -> SoupRun:
     """Run the soup for ``config.epochs`` and return its trajectory.
 
     Deterministic in ``config.seed``. Checkpoints frequently so that a partial
@@ -276,6 +276,10 @@ def run_soup(config: SoupConfig, progress: bool = False,
                 ]
                 with open(checkpoint_path, "w", encoding="utf-8") as f:
                     json.dump(run.__dict__, f, indent=2)
+            if on_checkpoint is not None:
+                # live view: hand over the metric row, a soup snapshot, and the
+                # current dominant counts so a dashboard can watch the cells move.
+                on_checkpoint(epoch, soup, cp, uniq, counts)
             if progress:
                 print(f"  epoch {epoch:6d}  repl={repl_rate:.4f}  "
                       f"uniq={unique_ratio:.3f}  top={top_share:.3f}  "
