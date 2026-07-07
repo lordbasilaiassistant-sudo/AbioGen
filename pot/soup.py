@@ -50,6 +50,7 @@ class SoupConfig:
     near_repl_sample: int = 128   # pairs sampled for the near-replication probe
     seed: int = 0
     scramble: bool = False        # if True, this is the structureless control
+    capture_events: int = 0       # capture up to N actual replicating source tapes
     # --- the TENDED arm: data-gated nurture (off by default; WILD is the null) ---
     nurture: bool = False         # if True, apply the nurture operator each epoch
     nurture_frac: float = 0.10    # fraction of the weakest tapes replaced by selection
@@ -112,6 +113,7 @@ class SoupRun:
     have_rust: bool
     trajectory: list = field(default_factory=list)   # list of checkpoint dicts
     dominant: list = field(default_factory=list)      # top genomes at the end
+    replicators: list = field(default_factory=list)   # actual tapes caught replicating
     fired: bool = False                               # did emergence fire (set by harness)
 
     def to_json(self, path: str) -> None:
@@ -130,6 +132,11 @@ def run_soup(config: SoupConfig, progress: bool = False,
     checkpoint.
     """
     rng = np.random.default_rng(config.seed)
+    # A SEPARATE stream for checkpoint-time metric sampling, so how often we
+    # checkpoint never perturbs the soup dynamics. Without this, the near_repl
+    # sample draws from the main rng and changing checkpoint_every silently
+    # changes the whole trajectory — breaking "every figure regenerates".
+    metric_rng = np.random.default_rng(config.seed ^ 0xA11CE)
     N, L = config.soup_size, config.tape_len
     P = N // 2  # pairs per epoch
 
@@ -176,6 +183,23 @@ def run_soup(config: SoupConfig, progress: bool = False,
         events = np.count_nonzero(differ & (b_is_copy_of_a | a_is_copy_of_b))
         repl_window.append((events, P))
 
+        # Capture the ACTUAL tapes caught replicating (the original that got copied
+        # onto its partner), so a replicator can be isolated and re-tested in the
+        # bare interpreter — the only way to prove it, not just detect a signal.
+        if config.capture_events and len(run.replicators) < config.capture_events:
+            for k in np.nonzero(differ & b_is_copy_of_a)[0]:
+                run.replicators.append({"epoch": int(epoch),
+                                        "genome": a_before[k].tobytes().hex(),
+                                        "partner": b_before[k].tobytes().hex()})
+                if len(run.replicators) >= config.capture_events:
+                    break
+            for k in np.nonzero(differ & a_is_copy_of_b)[0]:
+                if len(run.replicators) >= config.capture_events:
+                    break
+                run.replicators.append({"epoch": int(epoch),
+                                        "genome": b_before[k].tobytes().hex(),
+                                        "partner": a_before[k].tobytes().hex()})
+
         # --- TENDED arm: the nurture operator (data-gated, never authored) -------
         # "Vitality" = how much a tape imposed its OWN pattern on its partner
         # THROUGH the interpreter this epoch (measured, direct-overlap fraction,
@@ -218,7 +242,7 @@ def run_soup(config: SoupConfig, progress: bool = False,
         if last or (config.checkpoint_every and epoch % config.checkpoint_every == 0):
             # near-replication probe on a fresh sample of the just-run pairs
             ks = min(config.near_repl_sample, P)
-            sample = rng.choice(P, size=ks, replace=False)
+            sample = metric_rng.choice(P, size=ks, replace=False)
             sims = [_best_shift_similarity(a_after[s], b_after[s]) for s in sample]
             near_max = float(max(sims)) if sims else 0.0
             near_mean = float(np.mean(sims)) if sims else 0.0
