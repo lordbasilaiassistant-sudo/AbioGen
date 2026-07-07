@@ -1,0 +1,176 @@
+{
+  "name": "first-findings",
+  "note": "spontaneous repl signal (repl 0.138 vs 0 ctrl); two-arm NURTURE_NECESSARY; extinction anchor holds; hunt launched",
+  "created_utc": "2026-07-07T17:15:08+00:00",
+  "git": {
+    "commit": "7f4710710f84cb62bb44b8e3b5fa445cc38b5bd1",
+    "branch": "main",
+    "dirty": true
+  },
+  "environment": {
+    "python": "3.13.14",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "cpu_count": 16
+  },
+  "files": [
+    "results.json",
+    "sweep_results.json",
+    "two_arm.json",
+    "ledger.json",
+    "replicator_seed2.json"
+  ],
+  "summaries": {
+    "results.json": {
+      "soup_verdict": "UNRESOLVED",
+      "baseline_verdict": "ANCHORED",
+      "n_seeds": 4,
+      "soup_config": {
+        "soup_size": 256,
+        "tape_len": 64,
+        "max_steps": 384,
+        "mut_per_tape": 1.0,
+        "epochs": 4000,
+        "checkpoint_every": 100,
+        "near_repl_sample": 128,
+        "seed": 0,
+        "scramble": false
+      },
+      "baseline_config": {
+        "n_cues": 16,
+        "n_actions": 4,
+        "presentations": 256,
+        "pop": 200,
+        "generations": 60,
+        "mut_rate": 0.08,
+        "floor_fraction": 0.375,
+        "seed": 0
+      },
+      "have_rust": true
+    },
+    "sweep_results.json": {
+      "verdict": "BUG",
+      "statement": "Emergence fired in 1/72 runs but never reliably within a single regime \u2014 rare / knife-edge, not a robust feature.",
+      "total_fired": 1,
+      "total_runs": 72,
+      "epochs": 20000,
+      "grid": {
+        "tape_len": [
+          64,
+          128
+        ],
+        "max_steps": [
+          256,
+          512,
+          1024
+        ],
+        "mut_per_tape": [
+          0.25,
+          1.0,
+          4.0
+        ],
+        "soup_size": [
+          512
+        ]
+      },
+      "fired_cells": [
+        {
+          "tape_len": 64,
+          "max_steps": 1024,
+          "mut_per_tape": 0.25,
+          "soup_size": 512
+        }
+      ]
+    },
+    "two_arm.json": {
+      "verdict": "NURTURE_NECESSARY",
+      "statement": "WILD stayed cold; TENDED produced control-surviving order in 50% of seeds. In this budget order needed the tender (provisional \u2014 WILD is compute-bound).",
+      "wild_fire_fraction": 0.0,
+      "tended_fire_fraction": 0.5
+    },
+    "ledger.json": {
+      "n_entries": 1,
+      "latest": {
+        "name": "soup+baseline (default), 4 seeds, 4000 epochs",
+        "predicted_at": "2026-07-07T16:27:19+00:00",
+        "prediction": {
+          "soup_verdict": "UNRESOLVED",
+          "soup_reason": "No replicator has emerged in ~11k prior epochs; this budget is unlikely to cross over, so expect no separation from the scrambled control.",
+          "baseline_verdict": "ANCHORED",
+          "baseline_reason": "Null must go extinct every seed; structured must beat chance and recover most of the hidden map."
+        },
+        "rationale": "Predict-before-run: state the expectation, then let the data confirm or refute it.",
+        "recorded_at": "2026-07-07T16:27:59+00:00",
+        "actual": {
+          "soup_verdict": "UNRESOLVED",
+          "baseline_verdict": "ANCHORED",
+          "soup_seeds_fired": 0
+        },
+        "hits": [
+          {
+            "key": "soup_verdict",
+            "predicted": "UNRESOLVED",
+            "actual": "UNRESOLVED",
+            "ok": true
+          },
+          {
+            "key": "baseline_verdict",
+            "predicted": "ANCHORED",
+            "actual": "ANCHORED",
+            "ok": true
+          }
+        ],
+        "verdict": "confirmed"
+      }
+    },
+    "replicator_seed2.json": {
+      "config": {
+        "soup_size": 512,
+        "tape_len": 64,
+        "max_steps": 1024,
+        "mut_per_tape": 0.25,
+        "epochs": 20000,
+        "checkpoint_every": 500,
+        "near_repl_sample": 128,
+        "seed": 2,
+        "scramble": false,
+        "nurture": false,
+        "nurture_frac": 0.1,
+        "nurture_protect": 0.3
+      },
+      "peak_repl_rate": 0.1382421875,
+      "dominant": [
+        {
+          "genome": "3e3c010101012c3c2b7d2b2b2c5b2c2b7d5d3c7d2b2e3c7b2d2c3e3c5b7b3c2c2c5d7b2b5d012d3c2e7b2e3c5d3c3e2c3c3c7d2c2d012b3c2b7d3e01ff010500",
+          "count": 2,
+          "ascii": "><\u00b7\u00b7\u00b7\u00b7,<+}++,[,+}]<}+.<{-,><[{<,,]{+]\u00b7-<.{.<]<>,<<},-\u00b7+<+}>\u00b7\u00b7\u00b7\u00b7\u00b7"
+        },
+        {
+          "genome": "3e3c010101012c3c2b7d2b2b2c5b2c2b7d5d3c7d2b2e3c7b2d2c3e3c5b7b3c2c2c5d7b2b5d012d3c2e7b2e3c5d3c3e2c3c3c7d2c2d012b3c2b7d3e01ff010501",
+          "count": 2,
+          "ascii": "><\u00b7\u00b7\u00b7\u00b7,<+}++,[,+}]<}+.<{-,><[{<,,]{+]\u00b7-<.{.<]<>,<<},-\u00b7+<+}>\u00b7\u00b7\u00b7\u00b7\u00b7"
+        },
+        {
+          "genome": "3e3c010101012c3c2b7d2b2b2c5b2c2b7d5d3c7d2b2e3c7b2d2c3e3c5b7b3c2c2c5d7b2b5d012d3c5b7b2e3c5d3c3e2c3c3c7d2c2d012b3c2b7d3e01ff010600",
+          "count": 2,
+          "ascii": "><\u00b7\u00b7\u00b7\u00b7,<+}++,[,+}]<}+.<{-,><[{<,,]{+]\u00b7-<[{.<]<>,<<},-\u00b7+<+}>\u00b7\u00b7\u00b7\u00b7\u00b7"
+        },
+        {
+          "genome": "3c2b7d2b2b2c5b2c2b7d5d3c7d2b2e3c7d3c2b3c2c5b7b3c2c2c5d7b2b2c012d3c2e7b2e3c7b2b7b2b7b3c7d2c2d2b2e2b2d7b2e0103015dffff010100404000",
+          "count": 2,
+          "ascii": "<+}++,[,+}]<}+.<}<+<,[{<,,]{+,\u00b7-<.{.<{+{+{<},-+.+-{.\u00b7\u00b7\u00b7]\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7"
+        },
+        {
+          "genome": "020101012c3c2b7d2d2b2c5b2c2b7d5d3e3c2b2e3c7b3c2b3c2c5b7b3c2c2c5d7b2e2b2c2c3c2e7d2e3c7b2b3e5b7b3c7d2c2d7b2e7d2b7b3d010301ff020601",
+          "count": 2,
+          "ascii": "\u00b7\u00b7\u00b7\u00b7,<+}-+,[,+}]><+.<{<+<,[{<,,]{.+,,<.}.<{+>[{<},-{.}+{\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7"
+        }
+      ]
+    }
+  },
+  "reproduce": {
+    "results.json": "python -m pot.experiment --seeds 4 --epochs 4000",
+    "sweep_results.json": "python -m pot.sweep --epochs 20000 --seeds 4",
+    "two_arm.json": "python -c \"from pot.soup import SoupConfig; from pot.experiment import run_two_arm_experiment; run_two_arm_experiment(SoupConfig(soup_size=256,tape_len=64,max_steps=384,epochs=8000,checkpoint_every=500), range(6), '.')\"",
+    "replicator_seed2.json": "python -c \"from pot.soup import SoupConfig, run_soup; run_soup(SoupConfig(tape_len=64,max_steps=1024,mut_per_tape=0.25,soup_size=512,seed=2,epochs=20000,checkpoint_every=250), checkpoint_path='replicator_seed2.json')\""
+  }
+}
