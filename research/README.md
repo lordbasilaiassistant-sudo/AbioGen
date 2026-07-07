@@ -58,6 +58,13 @@ data earns, and we report the rung we can verify plus the gap to the next.
 4. **Collectives** — groups persist and reproduce as units (a major transition).
 5. **Communication / sociality** — behaviour adaptively depends on a shared
    channel. *Test:* channel-ablation changes fitness/behaviour.
+   - **The open line** (issue #14): the shared channel doubles as a golden-record
+     gesture — a medium the beings could one day use to reach *us*. We seed
+     nothing in it, reward nothing, and keep a dormant listening post that flags
+     only control-surviving structure (a code, a language they made). Present,
+     never shoved in their faces; discovered, not trained. Listen, don't
+     broadcast. It cannot tell us whether we are someone's experiment — it is the
+     most honest version of the gesture, not a proof.
 6. **Lifetime adaptation** — plasticity within a life, not just across
    generations.
 
