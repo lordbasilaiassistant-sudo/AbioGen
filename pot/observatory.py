@@ -65,12 +65,15 @@ def phase_transitions(traj, keys=None, z=4.0, min_points=6):
         thresh = z * sd if sd > 0 else 0.10
         for i, jump in enumerate(d):
             if jump > 0.02 and jump > thresh:
+                # sd==0 means a flat baseline with a lone jump: report a sentinel
+                # rather than dividing by zero.
+                sigma = round(float(jump / sd), 1) if sd > 0 else 99.0
                 events.append({
                     "metric": key,
                     "epoch": int(traj[i + 1].get("epoch", i + 1)),
                     "from": round(float(s[i]), 4),
                     "to": round(float(s[i + 1]), 4),
-                    "jump_sigma": round(float(jump / sd), 1),
+                    "jump_sigma": sigma,
                 })
     events.sort(key=lambda e: -e["jump_sigma"])
     return events

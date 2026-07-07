@@ -59,17 +59,27 @@ def _atomic_write(path, obj):
 
 
 def run_live(soup_size=4096, mut=0.1, steps=1024, epochs=200000, seed=0,
-             checkpoint_every=40, grid_tapes=120, out=DEFAULT_OUT, low_priority=True):
+             checkpoint_every=40, grid_tapes=120, out=DEFAULT_OUT, low_priority=True,
+             cosmic=False):
     if low_priority:
         from .util import set_low_priority
         set_low_priority()
     os.makedirs(os.path.dirname(out), exist_ok=True)
+    from . import cosmos
+    seed, origin = cosmos.resolve_seed(seed, cosmic)   # real-physics origin, logged
+    if origin:
+        print(f"[live] cosmic seed {seed} from {origin['sources_live']} real sources")
     cfg = SoupConfig(soup_size=soup_size, tape_len=64, max_steps=steps,
                      mut_per_tape=mut, epochs=epochs,
                      checkpoint_every=checkpoint_every, seed=seed)
     t0 = time.time()
     regime = {"soup_size": soup_size, "tape_len": 64, "max_steps": steps,
               "mut_per_tape": mut, "epochs": epochs, "seed": seed}
+    origin_summary = None
+    if origin:
+        origin_summary = {"sources_live": origin["sources_live"],
+                          "sources": [p["source"] for p in origin["provenance"]
+                                      if p["available"]]}
     traj = []
 
     def snapshot(epoch, soup, cp, uniq, counts, status="running"):
@@ -110,7 +120,7 @@ def run_live(soup_size=4096, mut=0.1, steps=1024, epochs=200000, seed=0,
             "epoch": int(epoch), "total_epochs": epochs,
             "progress": round(epoch / epochs, 4) if epochs else 0.0,
             "elapsed_sec": round(elapsed, 1), "eps": round(eps, 1),
-            "regime": regime,
+            "regime": regime, "origin": origin_summary,
             "trajectory": traj,
             "matchmap": matchmap, "grid_shape": [gt, int(L)],
             "dominant": dominant,
@@ -147,11 +157,13 @@ def main(argv=None):
     ap.add_argument("--grid-tapes", type=int, default=120)
     ap.add_argument("--out", default=DEFAULT_OUT)
     ap.add_argument("--full-speed", action="store_true")
+    ap.add_argument("--cosmic-seed", action="store_true",
+                    help="seed this world from real physical entropy (logged)")
     args = ap.parse_args(argv)
     run_live(soup_size=args.soup_size, mut=args.mut, steps=args.steps,
              epochs=args.epochs, seed=args.seed,
              checkpoint_every=args.checkpoint_every, grid_tapes=args.grid_tapes,
-             out=args.out, low_priority=not args.full_speed)
+             out=args.out, low_priority=not args.full_speed, cosmic=args.cosmic_seed)
 
 
 if __name__ == "__main__":

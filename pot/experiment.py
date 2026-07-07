@@ -284,10 +284,15 @@ def main(argv=None):
     ap.add_argument("--results", default="results.json")
     ap.add_argument("--ledger", default="ledger.json")
     ap.add_argument("--progress", action="store_true")
+    ap.add_argument("--cosmic-seed", action="store_true",
+                    help="root the seed range in real physical entropy (logged)")
     args = ap.parse_args(argv)
 
     from .util import set_low_priority
     set_low_priority()  # be polite on a machine that is also being used
+
+    from . import cosmos
+    cosmic_base, cosmic_origin = cosmos.resolve_seed(0, args.cosmic_seed)
 
     if args.quick:
         n_seeds = args.seeds or 2
@@ -305,7 +310,8 @@ def main(argv=None):
                                epochs=args.epochs or 3000, checkpoint_every=100)
         base_bl = BaselineConfig(generations=60)
 
-    seeds = list(range(n_seeds))
+    # cosmic base roots the whole seed range in real physics (still logged/reproducible)
+    seeds = [(cosmic_base + i) % (2 ** 63) for i in range(n_seeds)]
     os.makedirs(args.outdir, exist_ok=True)
 
     # ---- predict BEFORE running -------------------------------------------
@@ -339,6 +345,7 @@ def main(argv=None):
     results = {
         "have_rust": HAVE_RUST,
         "n_seeds": n_seeds,
+        "cosmic_origin": cosmic_origin,
         "soup_config": asdict(soup_base),
         "baseline_config": asdict(base_bl),
         "soup": {"verdict": sv, "records": soup_records},

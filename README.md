@@ -92,6 +92,28 @@ python web/build_site.py
 (predict-before-run). `web/build_site.py` embeds those real checkpoints into a
 single self-contained `web/index.html` — no build step, GitHub Pages ready.
 
+## Real-world origin (`--cosmic-seed`)
+
+A world can draw its first breath from *actual physics* instead of a chosen
+integer. [`pot/cosmos.py`](pot/cosmos.py) harvests real physical indeterminism —
+hardware thermal/timing entropy, nanosecond clock jitter, the machine's live
+thermodynamic state, and (best-effort) a physics lab's randomness beacon (NIST)
+plus atmospheric radio noise (random.org) — mixes it into a seed, and **logs the
+seed and its provenance.** So a cosmic run's *origin* is the real universe's
+noise while its *record* stays fully reproducible.
+
+```bash
+python -m pot.cosmos                       # show which real sources are reachable
+python -m pot.live --cosmic-seed           # a showcase soup born from real physics
+python -m pot.experiment --cosmic-seed     # root the science seeds in real physics
+```
+
+Honest scope: this makes the *origin* real; it does not, by itself, make
+organisms "know" the world (noise is noise). Binding them to real *structure*
+needs a real *signal* in their environment — the shared channel (issue #14),
+seeded by `cosmos.physical_sample()`. Microphone/camera adapters exist but are
+**off** by default (privacy — they need the library *and* explicit opt-in).
+
 ## Layout
 
 ```

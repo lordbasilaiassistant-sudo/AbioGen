@@ -107,14 +107,14 @@ def _worker(task):
 
 
 def run_hunt(mutations=None, steps_list=None, seeds=8, epochs=16000, workers=None,
-             soup_size=512, out="research/hunt_results.json"):
+             soup_size=512, out="research/hunt_results.json", seed_base=0):
     from .util import set_low_priority, polite_worker_count
     os.environ["RAYON_NUM_THREADS"] = "1"
     set_low_priority()
     mutations = mutations or DEFAULT_MUTATIONS
     steps_list = steps_list or DEFAULT_STEPS
     workers = workers or polite_worker_count()
-    tasks = [(m, s, sd, epochs, soup_size)
+    tasks = [(m, s, (seed_base + sd) % (2 ** 63), epochs, soup_size)
              for m in mutations for s in steps_list for sd in range(seeds)]
     print(f"[hunt] {len(tasks)} runs (+ controls), {epochs} epochs, soup={soup_size}, "
           f"mut={mutations} steps={steps_list} seeds={seeds}, {workers} polite workers")
@@ -193,15 +193,21 @@ def main(argv=None):
     ap.add_argument("--workers", type=int, default=None)
     ap.add_argument("--out", default="research/hunt_results.json")
     ap.add_argument("--fast", action="store_true")
+    ap.add_argument("--cosmic-seed", action="store_true",
+                    help="root the hunt's seeds in real physical entropy (logged)")
     args = ap.parse_args(argv)
+    from . import cosmos
+    base, origin = cosmos.resolve_seed(0, args.cosmic_seed)
+    if origin:
+        print(f"[hunt] cosmic base {base} from {origin['sources_live']} real sources")
     if args.fast:
         run_hunt(mutations=[0.0, 0.25], steps_list=[1024], seeds=args.seeds,
                  epochs=args.epochs, workers=args.workers,
-                 soup_size=args.soup_size, out=args.out)
+                 soup_size=args.soup_size, out=args.out, seed_base=base)
     else:
         run_hunt(mutations=args.mutations, steps_list=args.steps, seeds=args.seeds,
                  epochs=args.epochs, workers=args.workers,
-                 soup_size=args.soup_size, out=args.out)
+                 soup_size=args.soup_size, out=args.out, seed_base=base)
 
 
 if __name__ == "__main__":

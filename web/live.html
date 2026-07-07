@@ -87,6 +87,7 @@ h3.sec{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transfor
     <span class="name"><b>AbioGen</b> · live incubator</span>
     <span class="live" id="live"><span class="d"></span>LIVE</span>
     <span class="sp"></span>
+    <span class="lbl" id="origin"></span>
     <span class="lbl" id="regime">—</span>
   </div>
 
@@ -179,6 +180,11 @@ function spark(cv,series,opts){
 function render(d){
   const rg=d.regime;
   $("regime").textContent=`soup ${rg.soup_size.toLocaleString()} · mut ${rg.mut_per_tape} · steps ${rg.max_steps}`;
+  const og=$("origin");
+  if(d.origin&&d.origin.sources_live){og.style.color="var(--phosphor-dim)";
+    og.textContent=`⌁ origin: real physics · ${d.origin.sources_live} sources`;
+    og.title="seed drawn from "+(d.origin.sources||[]).join(", ");}
+  else{og.textContent="";}
   $("prog").style.width=(d.progress*100).toFixed(1)+"%";
   const done=d.status==="done";
   $("live").innerHTML=done?'<span class="d" style="animation:none;background:var(--muted);box-shadow:none"></span>DONE':'<span class="d"></span>LIVE';
