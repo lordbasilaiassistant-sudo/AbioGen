@@ -43,6 +43,12 @@ def _cells(grid):
         yield dict(zip(keys, combo))
 
 
+def _init_worker():
+    """Pool initializer: make every worker polite (below-normal priority)."""
+    from .util import set_low_priority
+    set_low_priority()
+
+
 def _worker(task):
     """Run one (cell, seed): real + scrambled control. Module-level for spawn."""
     # imported inside the worker so RAYON_NUM_THREADS (set by the parent env) is
@@ -75,19 +81,22 @@ def _worker(task):
 
 def run_sweep(grid=None, seeds=6, epochs=50000, checkpoint_every=500,
               workers=None, out="sweep_results.json", progress=True):
+    from .util import set_low_priority, polite_worker_count
     os.environ["RAYON_NUM_THREADS"] = "1"  # inherited by spawned workers
+    set_low_priority()  # the parent, too
     grid = grid or DEFAULT_GRID
     cells = list(_cells(grid))
     tasks = [(c, s, epochs, checkpoint_every) for c in cells for s in range(seeds)]
-    workers = workers or min(16, os.cpu_count() or 4)
+    # Polite by default: leave half the cores for the user, below-normal priority.
+    workers = workers or polite_worker_count()
 
     print(f"[sweep] {len(cells)} cells x {seeds} seeds = {len(tasks)} runs "
           f"(+ {len(tasks)} scrambled controls), {epochs} epochs each, "
-          f"{workers} workers")
+          f"{workers} polite workers (below-normal priority)")
     t0 = time.time()
     results = []
     done = 0
-    with ProcessPoolExecutor(max_workers=workers) as ex:
+    with ProcessPoolExecutor(max_workers=workers, initializer=_init_worker) as ex:
         futs = [ex.submit(_worker, t) for t in tasks]
         for fut in as_completed(futs):
             results.append(fut.result())

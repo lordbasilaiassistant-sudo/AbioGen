@@ -102,14 +102,27 @@ tests/         primitive correctness + honesty controls
 web/           build_site.py -> single static index.html (GitHub Pages)
 ```
 
-## Deploy
+## Deploy & compute
 
 - **Frontend:** GitHub Pages (the generated `web/index.html` is fully
-  self-contained — no external assets, no build step).
-- **Long compute:** a background worker on a free tier (e.g. Render). Free tiers
-  spin down when idle; a soup sweep is a batch job, so kick it, checkpoint
-  frequently, and pull the checkpoints — don't rely on a warm always-on
-  process. **Never Vercel.**
+  self-contained — no external assets, no build step). CI builds and deploys it
+  on every push to `main`.
+- **Compute is local and polite.** Sweeps run on your own machine but throttle
+  themselves: workers drop to below-normal scheduling priority
+  ([`pot/util.py`](pot/util.py)) and reserve half your cores, so the OS hands
+  foreground apps the CPU the instant they want it and the soup only fills the
+  spare cycles. Heavy runs slow down when you need the machine and speed back up
+  when you don't — no babysitting.
+
+  ```bash
+  python -m pot.sweep --epochs 20000 --seeds 4      # polite by default
+  python -m pot.sweep --workers 2 --epochs 2000000  # a deep, near-invisible run
+  ```
+
+  A managed free tier was considered and dropped: free workers spin down when
+  idle and can't hold a multi-million-epoch run, and this project's own rule is
+  that a personal machine shouldn't be a 24/7 grind host — so compute stays
+  local, self-throttling, and checkpointed instead. **Never Vercel.**
 
 ## What is *not* settled
 

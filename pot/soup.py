@@ -60,6 +60,26 @@ def _byte_entropy(cells: np.ndarray) -> float:
     return float(-(p * np.log2(p)).sum())
 
 
+def _top_motif_share(soup: np.ndarray, k: int = 8) -> float:
+    """Share of the single most common k-mer across every tape in the soup.
+
+    A replicator seeds one motif — its own genome — into many tapes, so the most
+    common k-mer's share climbs far above the background even if no tape is an
+    *exact* copy and diversity stays high (a quasispecies). The scrambled control
+    destroys shared substrings, so this is control-gated: it is the substring
+    analogue of ``top_share`` and catches replicators that ``repl_rate`` and the
+    lineage-sweep miss.
+    """
+    N, L = soup.shape
+    if L < k:
+        return 0.0
+    win = np.lib.stride_tricks.sliding_window_view(soup, k, axis=1)  # (N,L-k+1,k)
+    flat = np.ascontiguousarray(win.reshape(-1, k))
+    v = flat.view(np.dtype((np.void, k)))  # each k-mer as one hashable element
+    _, counts = np.unique(v, return_counts=True)
+    return float(counts.max()) / len(v)
+
+
 def _best_shift_similarity(a: np.ndarray, b: np.ndarray) -> float:
     """Best fraction of matching positions between `a` and every cyclic shift
     of `b`. Catches a replicator that copied itself at an offset — a *partial*
@@ -180,6 +200,7 @@ def run_soup(config: SoupConfig, progress: bool = False,
                 "entropy": _byte_entropy(soup),
                 "near_repl_max": near_max,
                 "near_repl_mean": near_mean,
+                "motif_share": _top_motif_share(soup),
             }
             run.trajectory.append(cp)
             if checkpoint_path:
@@ -223,7 +244,7 @@ def summarize(run: SoupRun) -> dict:
     if not run.trajectory:
         return {"peak_repl_rate": 0.0, "peak_near_repl": 0.0,
                 "min_unique_ratio": 1.0, "max_top_share": 0.0,
-                "min_entropy": 0.0, "final_entropy": 0.0}
+                "min_entropy": 0.0, "final_entropy": 0.0, "peak_motif_share": 0.0}
     return {
         "peak_repl_rate": max(c["repl_rate"] for c in run.trajectory),
         "peak_near_repl": max(c["near_repl_max"] for c in run.trajectory),
@@ -231,4 +252,5 @@ def summarize(run: SoupRun) -> dict:
         "max_top_share": max(c["top_share"] for c in run.trajectory),
         "min_entropy": min(c["entropy"] for c in run.trajectory),
         "final_entropy": run.trajectory[-1]["entropy"],
+        "peak_motif_share": max(c.get("motif_share", 0.0) for c in run.trajectory),
     }

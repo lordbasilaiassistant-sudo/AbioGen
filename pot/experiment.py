@@ -39,6 +39,12 @@ REPL_MARGIN = 0.02      # real repl_rate must beat control by this
 NEAR_MARGIN = 0.15      # near_repl noise floor is high; demand a real gap
 SHARE_MARGIN = 0.10     # a lineage sweep: top_share real >> control
 UNIQ_MARGIN = 0.10      # ... with diversity crashing in real but not control
+# motif_share is confounded by benign copy-autocorrelation (measured: real is
+# ~2x control, gap <= ~0.015 in cold runs with zero replication). So it may fire
+# ONLY far above that noise floor: a real quasispecies replicator repeats its
+# genome across many tapes and pushes one k-mer's share to 0.1-0.5+.
+MOTIF_MARGIN = 0.10     # real must beat control by 6x the measured noise gap
+MOTIF_FLOOR = 0.12      # ...and clear an absolute bar benign autocorrelation can't
 
 # ---- verdict thresholds -----------------------------------------------------
 FEATURE_FRAC = 0.60     # fires in >= 60% of seeds -> reliable
@@ -76,6 +82,10 @@ def _fires(real: dict, ctrl: dict) -> tuple:
     )
     if lineage_sweep:
         reasons.append("lineage_sweep>control")
+    # motif takeover: a dominant k-mer, far above the confounded noise floor
+    rm = real.get("peak_motif_share", 0.0)
+    if (rm - ctrl.get("peak_motif_share", 0.0) > MOTIF_MARGIN) and (rm > MOTIF_FLOOR):
+        reasons.append("motif_takeover>control")
     return (len(reasons) > 0, reasons)
 
 
@@ -206,6 +216,9 @@ def main(argv=None):
     ap.add_argument("--ledger", default="ledger.json")
     ap.add_argument("--progress", action="store_true")
     args = ap.parse_args(argv)
+
+    from .util import set_low_priority
+    set_low_priority()  # be polite on a machine that is also being used
 
     if args.quick:
         n_seeds = args.seeds or 2

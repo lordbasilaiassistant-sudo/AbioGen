@@ -1,0 +1,34 @@
+[
+  {
+    "name": "soup+baseline (default), 4 seeds, 4000 epochs",
+    "predicted_at": "2026-07-07T16:27:19+00:00",
+    "prediction": {
+      "soup_verdict": "UNRESOLVED",
+      "soup_reason": "No replicator has emerged in ~11k prior epochs; this budget is unlikely to cross over, so expect no separation from the scrambled control.",
+      "baseline_verdict": "ANCHORED",
+      "baseline_reason": "Null must go extinct every seed; structured must beat chance and recover most of the hidden map."
+    },
+    "rationale": "Predict-before-run: state the expectation, then let the data confirm or refute it.",
+    "recorded_at": "2026-07-07T16:27:59+00:00",
+    "actual": {
+      "soup_verdict": "UNRESOLVED",
+      "baseline_verdict": "ANCHORED",
+      "soup_seeds_fired": 0
+    },
+    "hits": [
+      {
+        "key": "soup_verdict",
+        "predicted": "UNRESOLVED",
+        "actual": "UNRESOLVED",
+        "ok": true
+      },
+      {
+        "key": "baseline_verdict",
+        "predicted": "ANCHORED",
+        "actual": "ANCHORED",
+        "ok": true
+      }
+    ],
+    "verdict": "confirmed"
+  }
+]

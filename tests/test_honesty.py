@@ -63,6 +63,32 @@ def test_near_repl_alone_never_fires():
     assert reasons == []
 
 
+def test_motif_moderate_elevation_does_not_fire():
+    # The measured confounded case: real motif ~2x control but tiny in absolute
+    # terms (benign copy-autocorrelation, zero replication). Must NOT fire.
+    real = dict(peak_repl_rate=0.0, peak_near_repl=0.3, min_unique_ratio=1.0,
+                max_top_share=0.01, min_entropy=3.5, final_entropy=4.0,
+                peak_motif_share=0.03)
+    ctrl = dict(peak_repl_rate=0.0, peak_near_repl=0.3, min_unique_ratio=1.0,
+                max_top_share=0.01, min_entropy=3.5, final_entropy=4.0,
+                peak_motif_share=0.012)
+    fired, reasons = _fires(real, ctrl)
+    assert fired is False, reasons
+
+
+def test_motif_takeover_fires():
+    # A genuine quasispecies: one k-mer dominates the soup, far above control.
+    real = dict(peak_repl_rate=0.0, peak_near_repl=0.5, min_unique_ratio=0.8,
+                max_top_share=0.03, min_entropy=2.0, final_entropy=2.0,
+                peak_motif_share=0.42)
+    ctrl = dict(peak_repl_rate=0.0, peak_near_repl=0.5, min_unique_ratio=0.99,
+                max_top_share=0.01, min_entropy=3.5, final_entropy=5.0,
+                peak_motif_share=0.012)
+    fired, reasons = _fires(real, ctrl)
+    assert fired is True
+    assert "motif_takeover>control" in reasons
+
+
 def test_gate_fires_on_a_real_lineage_sweep():
     # Positive control for the gate itself: a genuine sweep in real but not
     # control must fire, so the gate is not simply always-silent.
@@ -77,6 +103,25 @@ def test_gate_fires_on_a_real_lineage_sweep():
 
 
 # --- control 2: the extinction anchor ---------------------------------------
+
+# --- determinism: same seed -> identical results (every figure regenerates) ---
+
+def test_soup_is_deterministic_in_seed():
+    cfg = dict(soup_size=64, tape_len=32, max_steps=128, epochs=300,
+               checkpoint_every=100, seed=7)
+    a = summarize(run_soup(SoupConfig(**cfg)))
+    b = summarize(run_soup(SoupConfig(**cfg)))
+    assert a == b
+
+
+def test_baseline_is_deterministic_in_seed():
+    cfg = BaselineConfig(seed=5, generations=30)
+    a = run_baseline(cfg, structured=True)
+    b = run_baseline(cfg, structured=True)
+    assert a.final_capture == b.final_capture
+    assert a.map_recovered == b.map_recovered
+    assert [g["capture"] for g in a.trajectory] == [g["capture"] for g in b.trajectory]
+
 
 FAST_BASE = dict(generations=40, presentations=256, pop=200)
 
