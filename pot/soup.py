@@ -32,6 +32,12 @@ from .bff import INSTRUCTION_SET
 
 _IS = np.frombuffer(INSTRUCTION_SET, dtype=np.uint8)
 
+# The TENDED nurture operator only rewards a tape that stamps MORE than this
+# fraction of its own bytes onto its partner — well above chance direct overlap
+# (~0.1-0.15 once the soup fills with data bytes). Below it, selection is a
+# no-op: nurture amplifies genuine self-imposition, never ambient noise.
+_NURTURE_FLOOR = 0.50
+
 
 @dataclass
 class SoupConfig:
@@ -44,6 +50,10 @@ class SoupConfig:
     near_repl_sample: int = 128   # pairs sampled for the near-replication probe
     seed: int = 0
     scramble: bool = False        # if True, this is the structureless control
+    # --- the TENDED arm: data-gated nurture (off by default; WILD is the null) ---
+    nurture: bool = False         # if True, apply the nurture operator each epoch
+    nurture_frac: float = 0.10    # fraction of the weakest tapes replaced by selection
+    nurture_protect: float = 0.30 # mutation multiplier for "vital" tapes (<1 shields gains)
 
 
 def _byte_entropy(cells: np.ndarray) -> float:
@@ -166,9 +176,39 @@ def run_soup(config: SoupConfig, progress: bool = False,
         events = np.count_nonzero(differ & (b_is_copy_of_a | a_is_copy_of_b))
         repl_window.append((events, P))
 
-        # --- background mutation ---
+        # --- TENDED arm: the nurture operator (data-gated, never authored) -------
+        # "Vitality" = how much a tape imposed its OWN pattern on its partner
+        # THROUGH the interpreter this epoch (measured, direct-overlap fraction,
+        # plus a bonus for a full self-copy). We never inspect *what* the tape is,
+        # only that it self-propagated. Selection then reproduces the vital and
+        # shields them from mutation. If nothing self-propagates, vitality is 0
+        # everywhere and this is a no-op — nurture can only amplify what appears.
+        protect_row = np.ones(N, dtype=np.float64)
+        if config.nurture:
+            # Vitality only counts self-imposition ABOVE the chance-overlap floor,
+            # so nurture can never compound ambient noise (the lala-land trap): a
+            # tape must genuinely stamp >NURTURE_FLOOR of its own bytes onto its
+            # partner to earn selection, plus a bonus for a full autonomous copy.
+            vit = np.zeros(N, dtype=np.float64)
+            vit[ia] = np.maximum(0.0, (a_before == b_after).mean(axis=1)
+                                 - _NURTURE_FLOOR) + b_is_copy_of_a
+            vit[ib] = np.maximum(0.0, (b_before == a_after).mean(axis=1)
+                                 - _NURTURE_FLOOR) + a_is_copy_of_b
+            if vit.max() > 0:
+                n_rep = int(config.nurture_frac * N)
+                if n_rep > 0:
+                    weak = np.argsort(vit)[:n_rep]          # least self-propagating
+                    p = vit / vit.sum()
+                    parents = rng.choice(N, size=n_rep, p=p)  # reproduce the vital
+                    soup[weak] = soup[parents]
+                # shield real gains: vital tapes mutate less, the rest explore
+                vital = vit >= np.quantile(vit, 1.0 - config.nurture_frac)
+                protect_row[vital & (vit > 0)] = config.nurture_protect
+
+        # --- background mutation (protect-aware) --------------------------------
         if mut_rate > 0:
-            mask = rng.random((N, L)) < mut_rate
+            row_rate = mut_rate * protect_row
+            mask = rng.random((N, L)) < row_rate[:, None]
             k = int(mask.sum())
             if k:
                 soup[mask] = _IS[rng.integers(0, len(_IS), size=k)]

@@ -153,6 +153,75 @@ def soup_verdict(records) -> dict:
     }
 
 
+def run_two_arm_experiment(base: SoupConfig, seeds, outdir=None):
+    """WILD vs TENDED, each against its own scrambled control.
+
+    The comparative question your two-arm design asks: does order need a tender,
+    or does it arise on its own? Both arms start identically; TENDED adds the
+    data-gated nurture operator. Each arm is judged against its OWN scrambled
+    control, so TENDED's order only counts if it survives structure destruction
+    (i.e. it is not the nurture operator mechanically manufacturing uniformity).
+
+    The verdict is earned from the measured numbers:
+      * NURTURE_NECESSARY  — WILD cold, TENDED real (beats its scramble)
+      * NURTURE_ACCELERATES — both arms show real order
+      * COLD               — neither arm separates from its control
+      * NURTURE_ARTIFACT   — TENDED "order" matches its own scramble (lala-land)
+    """
+    arms = {"wild": [], "tended": []}
+    for s in seeds:
+        common = {**asdict(base), "seed": s}
+        for arm, nurture in (("wild", False), ("tended", True)):
+            real = run_soup(SoupConfig(**{**common, "nurture": nurture,
+                                          "scramble": False}))
+            ctrl = run_soup(SoupConfig(**{**common, "nurture": nurture,
+                                          "scramble": True}))
+            rs, ks = summarize(real), summarize(ctrl)
+            fired, reasons = _fires(rs, ks)
+            arms[arm].append({
+                "seed": s, "real": rs, "control": ks, "fired": fired,
+                "reasons": reasons, "trajectory": real.trajectory,
+                "control_trajectory": ctrl.trajectory, "dominant": real.dominant,
+            })
+
+    def frac(a):
+        return sum(1 for r in arms[a] if r["fired"]) / len(arms[a]) if arms[a] else 0.0
+    wild_f, tended_f = frac("wild"), frac("tended")
+    # did TENDED's apparent order merely echo its own scramble? (lala-land check)
+    tended_artifact = any(
+        (r["real"]["peak_motif_share"] - r["control"]["peak_motif_share"]) <= MOTIF_MARGIN
+        and r["real"]["max_top_share"] > 0.02  # apparent order, but not control-beating
+        for r in arms["tended"]
+    ) and tended_f == 0.0
+
+    if wild_f > 0 and tended_f > 0:
+        verdict, statement = "NURTURE_ACCELERATES", (
+            f"Real order in BOTH arms (wild {wild_f:.0%}, tended {tended_f:.0%} of "
+            f"seeds) — the substrate produces order on its own; nurture accelerates it.")
+    elif tended_f > 0 and wild_f == 0:
+        verdict, statement = "NURTURE_NECESSARY", (
+            f"WILD stayed cold; TENDED produced control-surviving order in "
+            f"{tended_f:.0%} of seeds. In this budget order needed the tender "
+            f"(provisional — WILD is compute-bound).")
+    elif tended_artifact:
+        verdict, statement = "NURTURE_ARTIFACT", (
+            "TENDED showed apparent order that did NOT survive its own scrambled "
+            "control — the nurture was compounding noise. Discarded as lala-land.")
+    else:
+        verdict, statement = "COLD", (
+            "Neither arm separated from its scrambled control within the budget.")
+
+    payload = {
+        "verdict": verdict, "statement": statement,
+        "wild_fire_fraction": wild_f, "tended_fire_fraction": tended_f,
+        "arms": arms,
+    }
+    if outdir:
+        with open(os.path.join(outdir, "two_arm.json"), "w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2)
+    return payload
+
+
 def run_baseline_experiment(base: BaselineConfig, seeds):
     """Structured vs null across seeds; the extinction anchor + VOID check."""
     struct, null = [], []

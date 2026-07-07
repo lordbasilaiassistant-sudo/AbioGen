@@ -51,6 +51,19 @@ def test_scrambled_control_does_not_fire_against_itself():
     assert soup_verdict(records)["verdict"] in {"UNRESOLVED", "BUG", "FEATURE"}
 
 
+def test_tended_nurture_cannot_manufacture_order_on_scrambled_structure():
+    # The TENDED nurture operator is active here, but on a soup whose structure
+    # is destroyed every epoch it must find no genuine self-imposition to amplify
+    # -> no dominant motif, no lineage sweep, no firing. This is what stops the
+    # nurturer from compounding noise (the lala-land trap).
+    cfg = SoupConfig(soup_size=64, tape_len=32, max_steps=128, epochs=1200,
+                     checkpoint_every=200, nurture=True, scramble=True, seed=1)
+    s = summarize(run_soup(cfg))
+    assert s["peak_motif_share"] < 0.12   # stays below the motif firing floor
+    assert s["max_top_share"] < 0.10      # the operator alone builds no lineage
+    assert s["peak_repl_rate"] == 0.0
+
+
 def test_near_repl_alone_never_fires():
     # near_repl is confounded and must not, by itself, trip the gate. Hand a
     # summary with a huge near_repl gap but zero real replication/sweep signal.
