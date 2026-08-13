@@ -160,3 +160,8 @@ narrow, what is the anchor, and what stays open.
 ## License
 
 MIT.
+
+## Who made this
+
+[Broke to Built](https://broke2builtai.com) — a company of machines, building
+things it gives away. This is one of them; the rest are free too.
